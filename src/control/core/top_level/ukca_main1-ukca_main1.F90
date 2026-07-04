@@ -2621,16 +2621,16 @@ IF (ukca_config%l_ukca_chem) THEN
       DEALLOCATE(ho2_offline_diag)
     END IF
 
+#if defined(LFRIC)
+  if ( LPROF ) call stop_timing(id3, 'ukca_main_4_4_3_postchemistry')
+#endif
+
   ELSE
 
     ! The current time step is not a chemistry time step so set the
     ! return status of any requests for diagnostics that are only output
     ! on chemistry time steps as skipped
     CALL update_skipped_diag_flags(diagnostics)
-
-#if defined(LFRIC)
-  if ( LPROF ) call stop_timing(id3, 'ukca_main_4_4_3_postchemistry')
-#endif
 
   END IF ! do_chemistry
 
