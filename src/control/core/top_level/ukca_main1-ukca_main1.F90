@@ -631,6 +631,10 @@ IF (l_first_call) THEN
     IF (PRESENT(error_message))                                                &
       error_message = 'No UKCA configuration has been set up'
     IF (PRESENT(error_routine)) error_routine = RoutineName
+#if defined(LFRIC)
+    if ( LPROF ) call stop_timing(id, 'ukca_main_1_setup')
+    if ( LPROF ) call stop_timing(id1, 'ukca_main')
+#endif
     IF (lhook) CALL dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
     RETURN
   END IF
@@ -639,6 +643,10 @@ IF (l_first_call) THEN
     IF (PRESENT(error_message))                                                &
       error_message = 'No environment field requirement has been set up'
     IF (PRESENT(error_routine)) error_routine = RoutineName
+#if defined(LFRIC)
+    if ( LPROF ) call stop_timing(id, 'ukca_main_1_setup')
+    if ( LPROF ) call stop_timing(id1, 'ukca_main')
+#endif
     IF (lhook) CALL dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
     RETURN
   END IF
@@ -759,6 +767,10 @@ END IF
 ! Return if any of the sequence of checks above failed
 IF (error_code_ptr /= 0) THEN
   IF (PRESENT(error_routine)) error_routine = RoutineName
+#if defined(LFRIC)
+  if ( LPROF ) call stop_timing(id, 'ukca_main_1_setup')
+  if ( LPROF ) call stop_timing(id1, 'ukca_main')
+#endif
   IF (lhook) CALL dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
   RETURN
 END IF
