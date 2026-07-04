@@ -215,9 +215,9 @@ if ( LPROF ) call stop_timing(id, 'ukca_step_pre_1d')
 
 ! Do the time step
 IF (error_code_ptr <= 0) THEN
-  #if defined(LFRIC)
+#if defined(LFRIC)
   if ( LPROF ) call start_timing(id, 'ukca_step_main_1d')
-  #endif
+#endif
 
   CALL ukca_main1(error_code_ptr, timestep_number, current_time,               &
                   environ_field_ptrs, r_theta_levels, r_rho_levels,            &
@@ -226,9 +226,9 @@ IF (error_code_ptr <= 0) THEN
                   eta_theta_levels=eta_theta_levels,                           &
                   error_message=error_message, error_routine=error_routine)
 
-  #if defined(LFRIC)
+#if defined(LFRIC)
   if ( LPROF ) call stop_timing(id, 'ukca_step_main_1d')
-  #endif
+#endif
 END IF
 
 #if defined(LFRIC)
@@ -411,9 +411,9 @@ if ( LPROF ) call stop_timing(id, 'ukca_step_pre_3d')
 
 ! Do the time step
 IF (error_code_ptr <= 0) THEN
-  #if defined(LFRIC)
+#if defined(LFRIC)
   if ( LPROF ) call start_timing(id, 'ukca_step_main_3d')
-  #endif
+#endif
 
   CALL ukca_main1(error_code_ptr, timestep_number, current_time,               &
                   environ_field_ptrs, r_theta_levels, r_rho_levels,            &
@@ -422,9 +422,9 @@ IF (error_code_ptr <= 0) THEN
                   eta_theta_levels=eta_theta_levels,                           &
                   error_message=error_message, error_routine=error_routine)
 
-  #if defined(LFRIC)
+#if defined(LFRIC)
   if ( LPROF ) call stop_timing(id, 'ukca_step_main_3d')
-  #endif
+#endif
 END IF
 
 #if defined(LFRIC)
