@@ -165,6 +165,7 @@ USE ukca_um_legacy_mod, ONLY:                                                  &
     item1_microplastic_diags, itemN_microplastic_diags,                        &
     mype,                                                                      &
     gg => g, planet_radius
+use timing_mod, ONLY: start_timing, stop_timing, tik, LPROF
 #endif
 
 USE ukca_humidity_mod,      ONLY: ukca_vmrsat_liq, ukca_vmr_clear_sky
@@ -581,15 +582,27 @@ REAL(KIND=jprb)               :: zhook_handle
 TYPE(autotune_type), ALLOCATABLE, SAVE :: autotune_state
 #endif
 
+#if defined(LFRIC)
+INTEGER(KIND=tik) :: id, id1, id2, id3
+#endif
+
 CHARACTER(LEN=*), PARAMETER :: RoutineName='UKCA_MAIN1'
 
 !- End of header
 ! ----------------------------------------------------------------------
 IF (lhook) CALL dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
 
+#if defined(LFRIC)
+if ( LPROF ) call start_timing(id1, 'ukca_main')
+#endif
+
 ! ----------------------------------------------------------------------
 ! 1. Initial set up
 ! ----------------------------------------------------------------------
+
+#if defined(LFRIC)
+if ( LPROF ) call start_timing(id, 'ukca_main_1_setup')
+#endif
 
 ! Set defaults for output arguments
 error_code_ptr = 0
@@ -963,9 +976,17 @@ END IF
 ! GLOMAP-mode
 IF (ukca_config%l_ukca_mode .AND. l_first_call) CALL ukca_aero_tracer_init()
 
+#if defined(LFRIC)
+if ( LPROF ) call stop_timing(id, 'ukca_main_1_setup')
+#endif
+
 ! ----------------------------------------------------------------------
 ! 3. Calculate any derived variables
 ! ----------------------------------------------------------------------
+
+#if defined(LFRIC)
+if ( LPROF ) call start_timing(id, 'ukca_main_3_derived')
+#endif
 
 ! Derived variables for chemistry
 IF (ukca_config%l_ukca_chem .OR. ukca_config%l_ukca_mode) THEN
@@ -1701,17 +1722,33 @@ IF (ukca_config%l_ukca_chem) THEN
   END IF
 END IF
 
+#if defined(LFRIC)
+if ( LPROF ) call stop_timing(id, 'ukca_main_3_derived')
+#endif
+
 ! ----------------------------------------------------------------------
 ! 4. Calls to science subroutines
 ! ----------------------------------------------------------------------
 ! 4.1 Age-of-air
 ! ----------------------------------------------------------------------
 
+#if defined(LFRIC)
+if ( LPROF ) call start_timing(id2, 'ukca_main_4_science')
+#endif
+
+#if defined(LFRIC)
+if ( LPROF ) call start_timing(id, 'ukca_main_4_1_ageofair')
+#endif
+
 IF ( ukca_config%l_ukca_ageair ) THEN
   CALL ukca_age_air(row_length, rows, model_levels, ukca_config%timestep,      &
                     z_top_of_model, all_tracers_names, all_tracers,            &
                     eta_theta_levels=eta_theta_levels)
 END IF    ! ukca_config%l_ukca_ageair
+
+#if defined(LFRIC)
+if ( LPROF ) call stop_timing(id, 'ukca_main_4_1_ageofair')
+#endif
 
 ! ----------------------------------------------------------------------
 ! 4.2 Chemistry related pre-processing
@@ -1721,6 +1758,10 @@ IF (ukca_config%l_ukca_chem) THEN
 
 #if !defined(LFRIC)
   IF (ukca_config%l_timer) CALL timer('UKCA CHEMISTRY MODEL',5)
+#endif
+
+#if defined(LFRIC)
+  if ( LPROF ) call start_timing(id, 'ukca_main_4_2_prechemistry')
 #endif
 
   ! Transform tracers to ensure elemental conservation
@@ -1865,9 +1906,17 @@ IF (ukca_config%l_ukca_chem) THEN
     END IF
   END IF
 
+#if defined(LFRIC)
+  if ( LPROF ) call stop_timing(id, 'ukca_main_4_2_prechemistry')
+#endif
+
   ! ----------------------------------------------------------------------
   ! 4.3 Emissions
   ! ----------------------------------------------------------------------
+
+#if defined(LFRIC)
+  if ( LPROF ) call start_timing(id, 'ukca_main_4_3_preemissions')
+#endif
 
   IF (.NOT. ukca_config%l_ukca_emissions_off) THEN
 
@@ -1895,10 +1944,18 @@ IF (ukca_config%l_ukca_chem) THEN
 
   END IF  ! .NOT. ukca_config%l_ukca_emissions_off
 
+#if defined(LFRIC)
+  if ( LPROF ) call stop_timing(id, 'ukca_main_4_3_preemissions')
+#endif
+
   !       Calculate solar zenith angle.
   !       Cos zenith angle and its integral over the day are required if
   !       applying a diurnal cycle to offline oxidants and/or to isoprene
   !       emissions.
+
+#if defined(LFRIC)
+  if ( LPROF ) call start_timing(id, 'ukca_main_4_3_cza')
+#endif
 
   IF (ukca_config%l_ukca_offline .OR. ukca_config%l_ukca_offline_be .OR.       &
       (ukca_config%l_diurnal_isopems .AND.                                     &
@@ -1978,11 +2035,19 @@ IF (ukca_config%l_ukca_chem) THEN
                        sin_declination, cos_zenith_angle, int_zenith_angle)
   END IF
 
+#if defined(LFRIC)
+  if ( LPROF ) call stop_timing(id, 'ukca_main_4_3_cza')
+#endif
+
 END IF ! IF (ukca_config%l_ukca_chem)
 
 IF (ukca_config%l_ukca_chem .OR. ukca_config%l_ukca_mode) THEN
   ! Emissions system (based on NetCDF emission input in the case of
   ! non-interactive emissions)
+
+#if defined(LFRIC)
+  if ( LPROF ) call start_timing(id, 'ukca_main_4_3_emissions')
+#endif
 
   ! Option to turn off emissions e.g. in UKCA box model
   IF (ukca_config%l_ukca_emissions_off) THEN
@@ -2041,9 +2106,16 @@ IF (ukca_config%l_ukca_chem .OR. ukca_config%l_ukca_mode) THEN
     IF (ALLOCATED(cos_zenith_angle)) DEALLOCATE(cos_zenith_angle)
 
   END IF ! l_ukca_emissions_off
+#if defined(LFRIC)
+  if ( LPROF ) call stop_timing(id, 'ukca_main_4_3_emissions')
+#endif
 END IF ! l_ukca_chem or l_ukca_mode
 
 IF (ukca_config%l_ukca_chem) THEN
+
+#if defined(LFRIC)
+  if ( LPROF ) call start_timing(id, 'ukca_main_4_3_asad_mass_diag')
+#endif
 
   IF (L_asad_use_chem_diags .AND. L_asad_use_mass_diagnostic)                  &
        CALL asad_mass_diagnostic(                                              &
@@ -2053,11 +2125,23 @@ IF (ukca_config%l_ukca_chem) THEN
        grid_airmass,                                                           &
        ierr)
 
+#if defined(LFRIC)
+  if ( LPROF ) call stop_timing(id, 'ukca_main_4_3_asad_mass_diag')
+#endif
+
     ! ----------------------------------------------------------------------
     ! 4.4 Call chemistry routines
     ! ----------------------------------------------------------------------
       ! Do chemistry calculation here (at chemistry timesteps)
+#if defined(LFRIC)
+  if ( LPROF ) call start_timing(id, 'ukca_main_4_4_chemistry')
+#endif
+
   IF (do_chemistry) THEN
+
+#if defined(LFRIC)
+  if ( LPROF ) call start_timing(id3, 'ukca_main_4_4_1_prechemistry')
+#endif
 
     IF (.NOT. ALLOCATED(t_chem)) ALLOCATE(t_chem(row_length,rows,model_levels))
     IF (.NOT. ALLOCATED(q_chem)) ALLOCATE(q_chem(row_length,rows,model_levels))
@@ -2223,7 +2307,15 @@ IF (ukca_config%l_ukca_chem) THEN
          l_firstchem                                                           &
          )
 
+#if defined(LFRIC)
+  if ( LPROF ) call stop_timing(id3, 'ukca_main_4_4_1_prechemistry')
+#endif
+
     IF (ukca_config%l_ukca_offline_be) THEN
+
+#if defined(LFRIC)
+  if ( LPROF ) call start_timing(id3, 'ukca_main_4_4_2_chem_be')
+#endif
 
       ! Offline chemistry with explicit backward-Euler solver
       CALL ukca_chemistry_ctl_be(                                              &
@@ -2252,8 +2344,16 @@ IF (ukca_config%l_ukca_chem) THEN
            l_firstchem                                                         &
            )
 
+#if defined(LFRIC)
+  if ( LPROF ) call stop_timing(id3, 'ukca_main_4_4_2_chem_be')
+#endif
+
     ELSE IF (ukca_config%l_ukca_trop .OR. ukca_config%l_ukca_aerchem .OR.      &
              ukca_config%l_ukca_raq .OR. ukca_config%l_ukca_raqaero) THEN
+
+#if defined(LFRIC)
+  if ( LPROF ) call start_timing(id3, 'ukca_main_4_4_2_chem_tropraq')
+#endif
 
       ! Aerosol mmr / numbers (from CLASSIC aerosol scheme) are only
       ! used by the RAQ chemistry scheme if heterogeneous chemistry
@@ -2335,7 +2435,15 @@ IF (ukca_config%l_ukca_chem) THEN
            l_firstchem                                                         &
            )
 
+#if defined(LFRIC)
+  if ( LPROF ) call stop_timing(id3, 'ukca_main_4_4_2_chem_tropraq')
+#endif
+
     ELSE IF (ukca_config%l_ukca_asad_full) THEN
+
+#if defined(LFRIC)
+  if ( LPROF ) call start_timing(id3, 'ukca_main_4_4_2_asad_full')
+#endif
 
       CALL ukca_chemistry_ctl_full(                                            &
            row_length, rows, model_levels,                                     &
@@ -2372,7 +2480,15 @@ IF (ukca_config%l_ukca_chem) THEN
            l_firstchem                                                         &
            )
 
+#if defined(LFRIC)
+  if ( LPROF ) call stop_timing(id3, 'ukca_main_4_4_2_asad_full')
+#endif
+
     ELSE IF (ukca_config%l_ukca_asad_columns) THEN
+
+#if defined(LFRIC)
+  if ( LPROF ) call start_timing(id3, 'ukca_main_4_4_2_asad_col')
+#endif
 
       CALL ukca_chemistry_ctl_col(                                             &
            row_length, rows, model_levels,                                     &
@@ -2409,7 +2525,15 @@ IF (ukca_config%l_ukca_chem) THEN
            zdryrt, zwetrt, nlev_with_ddep                                      &
            )
 
+#if defined(LFRIC)
+  if ( LPROF ) call stop_timing(id3, 'ukca_main_4_4_2_asad_col')
+#endif
+
     ELSE
+
+#if defined(LFRIC)
+  if ( LPROF ) call start_timing(id3, 'ukca_main_4_4_2_chem_ctl')
+#endif
 
       CALL ukca_chemistry_ctl(                                                 &
            row_length, rows, model_levels,                                     &
@@ -2445,7 +2569,16 @@ IF (ukca_config%l_ukca_chem) THEN
            zdryrt, zwetrt, nlev_with_ddep, co2_interactive, L_stratosphere,    &
            l_firstchem                                                         &
            )
+
+#if defined(LFRIC)
+  if ( LPROF ) call stop_timing(id3, 'ukca_main_4_4_2_chem_ctl')
+#endif
+
     END IF
+
+#if defined(LFRIC)
+  if ( LPROF ) call start_timing(id3, 'ukca_main_4_4_3_postchemistry')
+#endif
 
     ! ASAD post-processing
     IF (.NOT. ukca_config%l_ukca_offline_be) THEN
@@ -2483,8 +2616,19 @@ IF (ukca_config%l_ukca_chem) THEN
     ! on chemistry time steps as skipped
     CALL update_skipped_diag_flags(diagnostics)
 
+#if defined(LFRIC)
+  if ( LPROF ) call stop_timing(id3, 'ukca_main_4_4_3_postchemistry')
+#endif
+
   END IF ! do_chemistry
 
+#if defined(LFRIC)
+  if ( LPROF ) call stop_timing(id, 'ukca_main_4_4_chemistry')
+#endif
+
+#if defined(LFRIC)
+  if ( LPROF ) call start_timing(id, 'ukca_main_4_5_postchemistry')
+#endif
   IF (n_strat_fluxdiags > 0) THEN
     DO l=1,n_chem_tracers
       DO k=1,model_levels
@@ -2542,12 +2686,19 @@ IF (ukca_config%l_ukca_chem) THEN
 #if !defined(LFRIC)
   IF (ukca_config%l_timer) CALL timer('UKCA CHEMISTRY MODEL',6)
 #endif
+#if defined(LFRIC)
+if ( LPROF ) call stop_timing(id, 'ukca_main_4_5_postchemistry')
+#endif
 END IF    ! End of IF (l_ukca_chem) statement
 
 ! ----------------------------------------------------------------------
 ! 4.6 GLOMAP-mode aerosol scheme
 ! ----------------------------------------------------------------------
 IF (do_aerosol) THEN
+
+#if defined(LFRIC)
+  if ( LPROF ) call start_timing(id, 'ukca_main_4_6_aerosol')
+#endif
 
   ! Allocate space for copies of fields required for later diagnostic
   ! calculations
@@ -2678,6 +2829,10 @@ IF (do_aerosol) THEN
        nseg, nbox_s, ncol_s, lbase, stride_seg                                 &
        )
 
+#if defined(LFRIC)
+  if ( LPROF ) call stop_timing(id, 'ukca_main_4_6_aerosol')
+#endif
+
 #if !defined(LFRIC)
   !If autotuning is active, decide what to do with the
   !segment size and report the current status.
@@ -2690,6 +2845,10 @@ IF (do_aerosol) THEN
 
   ! Call activation scheme if switched on
   IF ( glomap_config%i_ukca_activation_scheme == i_ukca_activation_arg ) THEN
+
+#if defined(LFRIC)
+    if ( LPROF ) call start_timing(id, 'ukca_main_4_6_activate')
+#endif
 
     IF (.NOT. ALLOCATED(qsvp)) ALLOCATE(qsvp(row_length, rows, model_levels))
 
@@ -2728,13 +2887,24 @@ IF (do_aerosol) THEN
       all_ntp(i)%data_3d(:,:,:)=n_activ_sum(:,:,:)
     END IF
 
+#if defined(LFRIC)
+  if ( LPROF ) call stop_timing(id, 'ukca_main_4_6_activate')
+#endif
   END IF   ! ( i_ukca_activation_scheme == i_ukca_activation_arg )
 
 END IF   ! ukca_config%l_ukca_mode
 
+#if defined(LFRIC)
+if ( LPROF ) call stop_timing(id2, 'ukca_main_4_science')
+#endif
+
 ! ----------------------------------------------------------------------
 ! 5. Output prognostics and diagnostics
 ! ----------------------------------------------------------------------
+
+#if defined(LFRIC)
+if ( LPROF ) call start_timing(id, 'ukca_main_5_diagnostics')
+#endif
 
 ! ----------------------------------------------------------------------
 ! 5.1 Copy prognostics
@@ -3005,9 +3175,17 @@ IF (ukca_config%l_enable_diag_um .AND.                                         &
   END IF
 END IF
 
+#if defined(LFRIC)
+if ( LPROF ) call stop_timing(id, 'ukca_main_5_diagnostics')
+#endif
+
 ! ----------------------------------------------------------------------
 ! 6. Finally, blank out any missing diagnostics and deallocate arrays
 ! ----------------------------------------------------------------------
+
+#if defined(LFRIC)
+if ( LPROF ) call start_timing(id, 'ukca_main_6_blank')
+#endif
 
 ! Overwrite any non-valid diagnostic output if configured to do so
 IF (ukca_config%l_blankout_invalid_diags) THEN
@@ -3083,6 +3261,14 @@ IF ( do_chemistry ) l_firstchem = .FALSE.
 IF (l_autotune_segments) THEN
   CALL autotune_return(autotune_state)
 END IF
+#endif
+
+#if defined(LFRIC)
+if ( LPROF ) call stop_timing(id, 'ukca_main_6_blank')
+#endif
+
+#if defined(LFRIC)
+if ( LPROF ) call stop_timing(id1, 'ukca_main')
 #endif
 
 IF (lhook) CALL dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
