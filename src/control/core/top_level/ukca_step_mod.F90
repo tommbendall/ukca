@@ -48,6 +48,9 @@ USE ukca_error_mod, ONLY: maxlen_message, maxlen_procname
 ! Dr Hook modules
 USE yomhook,             ONLY: lhook, dr_hook
 USE parkind1,            ONLY: jprb, jpim
+#if defined(LFRIC)
+use timing_mod,          ONLY: start_timing, stop_timing, tik, LPROF
+#endif
 
 IMPLICIT NONE
 
@@ -152,10 +155,17 @@ TYPE(diagnostics_type) :: diagnostics
 
 ! Dr Hook data
 REAL(KIND=jprb) :: zhook_handle
+#if defined(LFRIC)
+integer(tik)        :: id
+#endif
 
 CHARACTER(LEN=*), PARAMETER :: RoutineName='UKCA_STEP_1D_DOMAIN'
 
 IF (lhook) CALL dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
+
+#if defined(LFRIC)
+if ( LPROF ) call start_timing(id, 'ukca_step_pre_1d')
+#endif
 
 ! Use parent supplied argument for return code.
 ! Note that this argument is redundant if UKCA is configured to abort on error
@@ -199,8 +209,15 @@ IF (error_code_ptr <= 0) THEN
 
 END IF
 
+#if defined(LFRIC)
+if ( LPROF ) call stop_timing(id, 'ukca_step_pre_1d')
+#endif
+
 ! Do the time step
 IF (error_code_ptr <= 0) THEN
+#if defined(LFRIC)
+  if ( LPROF ) call start_timing(id, 'ukca_step_main_1d')
+#endif
 
   CALL ukca_main1(error_code_ptr, timestep_number, current_time,               &
                   environ_field_ptrs, r_theta_levels, r_rho_levels,            &
@@ -209,7 +226,14 @@ IF (error_code_ptr <= 0) THEN
                   eta_theta_levels=eta_theta_levels,                           &
                   error_message=error_message, error_routine=error_routine)
 
+#if defined(LFRIC)
+  if ( LPROF ) call stop_timing(id, 'ukca_step_main_1d')
+#endif
 END IF
+
+#if defined(LFRIC)
+if ( LPROF ) call start_timing(id, 'ukca_step_post_1d')
+#endif
 
 IF (error_code_ptr <= 0) THEN
 
@@ -246,6 +270,10 @@ END IF
 CALL ntp_dealloc()
 CALL tracer_dealloc()
 CALL diag_status_dealloc(diagnostics)
+
+#if defined(LFRIC)
+if ( LPROF ) call stop_timing(id, 'ukca_step_post_1d')
+#endif
 
 IF (lhook) CALL dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 RETURN
@@ -322,10 +350,17 @@ TYPE(diagnostics_type) :: diagnostics
 
 ! Dr Hook data
 REAL(KIND=jprb) :: zhook_handle
+#if defined(LFRIC)
+integer(tik)        :: id
+#endif
 
 CHARACTER(LEN=*), PARAMETER :: RoutineName='UKCA_STEP_3D_DOMAIN'
 
 IF (lhook) CALL dr_hook(ModuleName//':'//RoutineName,zhook_in,zhook_handle)
+
+#if defined(LFRIC)
+if ( LPROF ) call start_timing(id, 'ukca_step_pre_3d')
+#endif
 
 ! Use parent supplied argument for return code.
 ! Note that this argument is redundant if UKCA is configured to abort on error
@@ -370,8 +405,15 @@ IF (error_code_ptr <= 0) THEN
 
 END IF
 
+#if defined(LFRIC)
+if ( LPROF ) call stop_timing(id, 'ukca_step_pre_3d')
+#endif
+
 ! Do the time step
 IF (error_code_ptr <= 0) THEN
+#if defined(LFRIC)
+  if ( LPROF ) call start_timing(id, 'ukca_step_main_3d')
+#endif
 
   CALL ukca_main1(error_code_ptr, timestep_number, current_time,               &
                   environ_field_ptrs, r_theta_levels, r_rho_levels,            &
@@ -380,7 +422,14 @@ IF (error_code_ptr <= 0) THEN
                   eta_theta_levels=eta_theta_levels,                           &
                   error_message=error_message, error_routine=error_routine)
 
+#if defined(LFRIC)
+  if ( LPROF ) call stop_timing(id, 'ukca_step_main_3d')
+#endif
 END IF
+
+#if defined(LFRIC)
+if ( LPROF ) call start_timing(id, 'ukca_step_post_3d')
+#endif
 
 IF (error_code_ptr <= 0) THEN
 
@@ -419,6 +468,10 @@ END IF
 CALL ntp_dealloc()
 CALL tracer_dealloc()
 CALL diag_status_dealloc(diagnostics)
+
+#if defined(LFRIC)
+if ( LPROF ) call stop_timing(id, 'ukca_step_post_3d')
+#endif
 
 IF (lhook) CALL dr_hook(ModuleName//':'//RoutineName,zhook_out,zhook_handle)
 RETURN
